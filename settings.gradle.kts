@@ -20,5 +20,10 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "SRLinq"
-include(":app")
 include(":Linq")
+
+// Evita incluir el módulo :app cuando se construye en JitPack
+val skipApp = System.getenv("SKIP_APP")
+if (skipApp.isNullOrBlank()) {
+    include(":app")
+}
