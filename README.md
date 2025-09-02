@@ -36,6 +36,7 @@ Una implementación de operadores estilo LINQ para Java, inspirada en .NET LINQ,
 ```java
 import com.example.linq.Linq;
 import java.util.List;
+import java.util.Map;
 
 public class Ejemplo {
     public static void main(String[] args) {
@@ -46,6 +47,32 @@ public class Ejemplo {
         
         // Transformar elementos
         List<String> comoTexto = Linq.select(numeros, n -> "Número: " + n);
+        
+        // Agrupar elementos
+        Map<String, List<Integer>> grupos = Linq.groupBy(
+            numeros,
+            n -> n % 2 == 0 ? "Pares" : "Impares"
+        );
+        
+        // Unir colecciones
+        List<Persona> personas = List.of(
+            new Persona(1, "Ana"),
+            new Persona(2, "Carlos")
+        );
+        
+        List<Pedido> pedidos = List.of(
+            new Pedido(1, "Laptop"),
+            new Pedido(1, "Mouse"),
+            new Pedido(2, "Teclado")
+        );
+        
+        List<String> pedidosPersonas = Linq.join(
+            personas,
+            pedidos,
+            p -> p.id,
+            ped -> ped.personaId,
+            (persona, pedido) -> persona.nombre + " compró: " + pedido.producto
+        );
         
         // Contar elementos que cumplen una condición
         int cantidadImpares = Linq.count(numeros, n -> n % 2 != 0);
@@ -71,6 +98,18 @@ public class Ejemplo {
 - `findIndex(Iterable<T> source, Predicate<T> predicate)`: Encuentra el índice del primer elemento que cumple el predicado
 - `firstOrDefault(Iterable<T> source)`: Obtiene el primer elemento o null
 - `firstOrDefault(Iterable<T> source, Predicate<T> predicate)`: Obtiene el primer elemento que cumple el predicado o null
+
+### Agrupación
+- `groupBy(Iterable<T> source, Function<T,K> keySelector)`: Agrupa elementos por una clave
+- `groupBy(Iterable<T> source, Function<T,K> keySelector, Function<T,V> valueSelector)`: Agrupa elementos transformando cada elemento
+
+### Unión (Join)
+- `join(Iterable<TOuter> outer, Iterable<TInner> inner, Function<TOuter,K> outerKey, Function<TInner,K> innerKey, BiFunction<TOuter,TInner,R> result)`: Realiza una unión interna entre dos secuencias
+  - `outer`: Secuencia externa
+  - `inner`: Secuencia a unir
+  - `outerKey`: Selector de clave para la secuencia externa
+  - `innerKey`: Selector de clave para la secuencia interna
+  - `result`: Función para crear el resultado a partir de elementos coincidentes
 
 ### Agregación
 - `count(Iterable<T> source)`: Cuenta todos los elementos
@@ -135,7 +174,44 @@ List<String> resultado = Linq.where(
     Linq.select(numeros, n -> n * 2),  // Multiplica por 2
     n -> n > 5                         // Filtra mayores a 5
 );
-```
+
+### Ejemplo de Composición
+
+```java
+// Combinar select y where
+List<String> resultado = Linq.where(
+    Linq.select(numeros, n -> n * 2),  // Multiplica por 2
+    n -> n > 5                         // Filtra mayores a 5
+);
+
+// Ejemplo de groupBy
+Map<String, List<Integer>> grupos = Linq.groupBy(
+    numeros,
+    n -> n % 2 == 0 ? "Pares" : "Impares"
+);
+// Resultado: {"Pares"=[2,4,6,8,10], "Impares"=[1,3,5,7,9]}
+
+// Ejemplo de join
+class Persona {
+    int id;
+    String nombre;
+}
+
+class Pedido {
+    int personaId;
+    String producto;
+}
+
+List<Persona> personas = ...;
+List<Pedido> pedidos = ...;
+
+List<String> compras = Linq.join(
+    personas,
+    pedidos,
+    p -> p.id,
+    ped -> ped.personaId,
+    (p, ped) -> p.nombre + " compró " + ped.producto
+);
 
 ### Uso con objetos complejos
 ```java

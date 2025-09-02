@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2025-09-02
+### Added
+- Métodos de agrupación:
+  - `groupBy`: Para agrupar elementos por una clave
+  - `groupBy` con selector de elementos: Para transformar elementos durante la agrupación
+- Métodos de unión (join):
+  - `join`: Para realizar uniones internas entre dos secuencias
+  - Soporte para selectores de claves personalizados
+  - Manejo de transformación de resultados
+- Mejoras en el manejo de colecciones vacías y nulas
+- Documentación ampliada con ejemplos de uso
+
 ## [0.2.0] - 2025-09-02
 ### Added
 - Métodos de agregación numérica:

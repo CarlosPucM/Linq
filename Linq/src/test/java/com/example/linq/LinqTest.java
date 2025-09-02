@@ -2,9 +2,12 @@ package com.example.linq;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import static org.junit.Assert.*;
@@ -399,5 +402,216 @@ public class LinqTest {
     @Test
     public void testAll_NullSourceReturnsTrue() {
         assertTrue(Linq.all(null, n -> true));
+    }
+    
+    // Pruebas para groupBy
+    @Test
+    public void testGroupBy_WithValidInput_GroupsElementsByKey() {
+        // Arrange
+        List<String> words = Arrays.asList("apple", "banana", "cherry", "date", "elderberry");
+        
+        // Act
+        Map<Integer, List<String>> result = Linq.groupBy(words, String::length);
+        
+        // Assert
+        assertEquals(4, result.size());
+        assertEquals(1, result.get(4).size()); // "date"
+        assertEquals(1, result.get(5).size()); // "apple"
+        assertEquals(2, result.get(6).size()); // "banana", "cherry"
+        assertEquals(1, result.get(10).size()); // "elderberry"
+        assertTrue(result.get(6).containsAll(Arrays.asList("banana", "cherry")));
+    }
+    
+    @Test
+    public void testGroupBy_WithElementSelector_TransformsElements() {
+        // Arrange
+        List<String> words = Arrays.asList("apple", "banana", "cherry");
+        
+        // Act
+        Map<Integer, List<Integer>> result = Linq.groupBy(
+            words,
+            String::length,
+            String::hashCode
+        );
+        
+        // Assert
+        assertEquals(2, result.size());
+        assertEquals(1, result.get(5).size()); // "apple"
+        assertEquals(2, result.get(6).size()); // "banana", "cherry"
+    }
+    
+    @Test
+    public void testGroupBy_WithEmptySource_ReturnsEmptyMap() {
+        // Arrange
+        List<String> emptyStringList = new ArrayList<>();
+        
+        // Act
+        Map<Integer, List<String>> result = Linq.groupBy(emptyStringList, s -> s.length());
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testGroupBy_WithNullSource_ReturnsEmptyMap() {
+        // Act
+        Map<Integer, List<String>> result = Linq.groupBy(null, s -> s.length());
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testGroupBy_WithNullKeySelector_ReturnsEmptyMap() {
+        // Act
+        Map<Integer, List<String>> result = Linq.groupBy(strings, null);
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    // Pruebas para join
+    @Test
+    public void testJoin_WithMatchingKeys_ReturnsJoinedResults() {
+        // Arrange
+        class Person {
+            final int id;
+            final String name;
+            
+            Person(int id, String name) {
+                this.id = id;
+                this.name = name;
+            }
+        }
+        
+        class Order {
+            final int personId;
+            final String product;
+            
+            Order(int personId, String product) {
+                this.personId = personId;
+                this.product = product;
+            }
+        }
+        
+        List<Person> people = Arrays.asList(
+            new Person(1, "Alice"),
+            new Person(2, "Bob")
+        );
+        
+        List<Order> orders = Arrays.asList(
+            new Order(1, "Laptop"),
+            new Order(1, "Mouse"),
+            new Order(2, "Keyboard")
+        );
+        
+        // Act
+        List<String> result = Linq.join(
+            people,
+            orders,
+            person -> person.id,
+            order -> order.personId,
+            (person, order) -> person.name + " bought a " + order.product
+        );
+        
+        // Assert
+        assertEquals(3, result.size());
+        assertTrue(result.contains("Alice bought a Laptop"));
+        assertTrue(result.contains("Alice bought a Mouse"));
+        assertTrue(result.contains("Bob bought a Keyboard"));
+    }
+    
+    @Test
+    public void testJoin_WithNoMatches_ReturnsEmptyList() {
+        // Arrange
+        List<Integer> numbers1 = Arrays.asList(1, 2, 3);
+        List<Integer> numbers2 = Arrays.asList(4, 5, 6);
+        
+        // Act
+        List<String> result = Linq.join(
+            numbers1,
+            numbers2,
+            n -> n,
+            n -> n,
+            (a, b) -> a + "-" + b
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testJoin_WithEmptyOuter_ReturnsEmptyList() {
+        // Act
+        List<String> result = Linq.join(
+            emptyList,
+            numbers,
+            n -> n,
+            n -> n,
+            (a, b) -> a + "-" + b
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testJoin_WithEmptyInner_ReturnsEmptyList() {
+        // Act
+        List<String> result = Linq.join(
+            numbers,
+            emptyList,
+            n -> n,
+            n -> n,
+            (a, b) -> a + "-" + b
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testJoin_WithNullSource_ReturnsEmptyList() {
+        // Act
+        List<String> result = Linq.join(
+            null,
+            numbers,
+            n -> n,
+            n -> n,
+            (a, b) -> a + "-" + b
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testJoin_WithNullKeySelector_ReturnsEmptyList() {
+        // Act
+        List<String> result = Linq.join(
+            numbers,
+            numbers,
+            null,
+            n -> n,
+            (a, b) -> a + "-" + b
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+    
+    @Test
+    public void testJoin_WithNullResultSelector_ReturnsEmptyList() {
+        // Act
+        List<String> result = Linq.join(
+            numbers,
+            numbers,
+            n -> n,
+            n -> n,
+            null
+        );
+        
+        // Assert
+        assertTrue(result.isEmpty());
     }
 }

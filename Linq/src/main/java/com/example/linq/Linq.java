@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -547,6 +550,105 @@ public class Linq {
         return orderBy(source, Function.identity(), false);
     }
 
+    /**
+     * Agrupa los elementos de una secuencia según una clave especificada.
+     *
+     * @param <T>         El tipo de los elementos de la fuente.
+     * @param <K>         El tipo de la clave de agrupación.
+     * @param source      La secuencia de valores que se va a agrupar.
+     * @param keySelector Función para extraer la clave de cada elemento.
+     * @return Un Map donde las claves son los valores devueltos por keySelector
+     *         y los valores son listas de elementos que tienen cada clave.
+     *         Devuelve un mapa vacío si la fuente es null.
+     */
+    public static <T, K> Map<K, List<T>> groupBy(
+            Iterable<T> source,
+            Function<T, K> keySelector) {
+        if (!any(source) || keySelector == null) {
+            return new HashMap<>();
+        }
+
+        return StreamSupport.stream(source.spliterator(), false)
+                .collect(Collectors.groupingBy(
+                        keySelector,
+                        HashMap::new,
+                        Collectors.toList()
+                ));
+    }
+
+    /**
+     * Agrupa los elementos de una secuencia según una clave especificada
+     * y aplica una función de transformación a cada elemento del grupo.
+     *
+     * @param <T>         El tipo de los elementos de la fuente.
+     * @param <K>         El tipo de la clave de agrupación.
+     * @param <V>         El tipo de los elementos resultantes en cada grupo.
+     * @param source      La secuencia de valores que se va a agrupar.
+     * @param keySelector Función para extraer la clave de cada elemento.
+     * @param elementSelector Función para transformar cada elemento en el grupo.
+     * @return Un Map donde las claves son los valores devueltos por keySelector
+     *         y los valores son listas de elementos transformados que tienen cada clave.
+     *         Devuelve un mapa vacío si la fuente o algún selector es null.
+     */
+    public static <T, K, V> Map<K, List<V>> groupBy(
+            Iterable<T> source,
+            Function<T, K> keySelector,
+            Function<T, V> elementSelector) {
+        if (!any(source) || keySelector == null || elementSelector == null) {
+            return new HashMap<>();
+        }
+
+        return StreamSupport.stream(source.spliterator(), false)
+                .collect(Collectors.groupingBy(
+                        keySelector,
+                        HashMap::new,
+                        Collectors.mapping(elementSelector, Collectors.toList())
+                ));
+    }
+
+    /**
+     * Realiza una operación de join interno entre dos secuencias basándose en claves coincidentes.
+     *
+     * @param <TOuter>      El tipo de los elementos de la primera secuencia.
+     * @param <TInner>      El tipo de los elementos de la segunda secuencia.
+     * @param <TKey>        El tipo de las claves devueltas por las funciones de selector de claves.
+     * @param <TResult>     El tipo de los elementos del resultado.
+     * @param outer         La primera secuencia a unir.
+     * @param inner         La secuencia a unir a la primera secuencia.
+     * @param outerKeySelector Función para extraer la clave de unión de cada elemento de la primera secuencia.
+     * @param innerKeySelector Función para extraer la clave de unión de cada elemento de la segunda secuencia.
+     * @param resultSelector Función para crear un elemento de resultado a partir de dos elementos coincidentes.
+     * @return Una lista que contiene elementos de tipo TResult que se obtienen al realizar una unión interna en dos secuencias.
+     *         Devuelve una lista vacía si alguna de las secuencias o selectores es null.
+     */
+    public static <TOuter, TInner, TKey, TResult> List<TResult> join(
+            Iterable<TOuter> outer,
+            Iterable<TInner> inner,
+            Function<TOuter, TKey> outerKeySelector,
+            Function<TInner, TKey> innerKeySelector,
+            BiFunction<TOuter, TInner, TResult> resultSelector) {
+
+        if (!any(outer) || !any(inner) ||
+                outerKeySelector == null || innerKeySelector == null ||
+                resultSelector == null) {
+            return Collections.emptyList();
+        }
+
+        // Crear un mapa de la secuencia interna para búsquedas rápidas
+        Map<TKey, List<TInner>> innerLookup = StreamSupport.stream(inner.spliterator(), false)
+                .collect(Collectors.groupingBy(innerKeySelector));
+
+        // Realizar el join
+        return StreamSupport.stream(outer.spliterator(), false)
+                .flatMap(outerItem -> {
+                    TKey key = outerKeySelector.apply(outerItem);
+                    List<TInner> matchingItems = innerLookup.getOrDefault(key, Collections.emptyList());
+                    return matchingItems.stream()
+                            .map(innerItem -> resultSelector.apply(outerItem, innerItem));
+                })
+                .collect(Collectors.toList());
+    }
+
     /*
 
     // Ejemplo de uso:
@@ -782,5 +884,56 @@ public class Linq {
         // Con nulos
         boolean conNulo = Linq.all(null, x -> true);  // true
         boolean conPredicadoNulo = Linq.all(numeros, null);  // false
+
+        // --- Ejemplos de groupBy ---
+        // Ejemplo con la versión simple
+        Map<Integer, List<Persona>> personasPorEdad = Linq.groupBy(
+            listaPersonas,
+            p -> p.getEdad()
+        );
+
+        // Ejemplo con transformación
+        Map<Integer, List<String>> nombresPorEdad = Linq.groupBy(
+            listaPersonas,
+            p -> p.getEdad(),      // Clave: edad
+            p -> p.getNombre()     // Valor: nombre
+        );
+
+
+
+        // --- Ejemplos de join ---
+        class Person {
+            int id;
+            String name;
+            // getters, constructor
+        }
+
+        class Order {
+            int personId;
+            String product;
+            // getters, constructor
+        }
+
+        List<Person> people = List.of(
+            new Person(1, "Alice"),
+            new Person(2, "Bob")
+        );
+
+        List<Order> orders = List.of(
+            new Order(1, "Laptop"),
+            new Order(1, "Mouse"),
+            new Order(2, "Keyboard")
+        );
+
+        // Join people with their orders
+        List<String> personOrders = Linq.join(
+            people,                  // outer sequence
+            orders,                  // inner sequence
+            person -> person.id,     // outer key selector
+            order -> order.personId, // inner key selector
+            (person, order) -> person.name + " bought a " + order.product // result selector
+        );
+
+        // Result: ["Alice bought a Laptop", "Alice bought a Mouse", "Bob bought a Keyboard"]
     }*/
 }
