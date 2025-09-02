@@ -27,7 +27,7 @@ Una implementación de operadores estilo LINQ para Java, inspirada en .NET LINQ,
 2. Agrega la dependencia:
    ```gradle
    dependencies {
-       implementation 'com.github.CarlosPucM:Linq:v0.1.2'
+       implementation 'com.github.CarlosPucM:Linq:v0.4.0'
    }
    ```
 
