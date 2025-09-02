@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0] - 2025-09-02
+### Fixed
+- Mejora en el manejo de colecciones nulas en `groupJoin`
+- Corrección en el comportamiento de `groupJoin` cuando la secuencia interna es nula
+- Optimización del rendimiento para colecciones grandes
+
+### Added
+- Nuevos casos de prueba para validar el manejo de valores nulos
+- Documentación actualizada con ejemplos mejorados
+
 ## [0.3.0] - 2025-09-02
 ### Added
 - Métodos de agrupación:

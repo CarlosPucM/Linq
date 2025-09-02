@@ -131,6 +131,82 @@ public class Ejemplo {
 ### Ordenación
 - `orderBy(Iterable<T> source)`: Ordena en orden natural ascendente
 - `orderBy(Iterable<T> source, Function<T, ? extends Comparable> keySelector)`: Ordena por clave en orden ascendente
+
+### Uniones y Agrupaciones
+- `groupJoin(outer, inner, outerKeySelector, innerKeySelector, resultSelector)`: Realiza una unión agrupada entre dos secuencias
+- `join(outer, inner, outerKeySelector, innerKeySelector, resultSelector)`: Realiza una unión interna entre dos secuencias
+
+## Ejemplos de Uso
+
+### Ejemplo de groupJoin
+
+```java
+// Clases de ejemplo
+class Department {
+    int id;
+    String name;
+    // getters y constructor
+}
+
+class Employee {
+    int id;
+    String name;
+    int departmentId;
+    // getters y constructor
+}
+
+// Datos de ejemplo
+List<Department> departments = Arrays.asList(
+    new Department(1, "IT"),
+    new Department(2, "HR")
+);
+
+List<Employee> employees = Arrays.asList(
+    new Employee(1, "Juan", 1),
+    new Employee(2, "María", 1),
+    new Employee(3, "Pedro", 2)
+);
+
+// Realizar groupJoin
+List<DepartmentWithEmployees> result = Linq.groupJoin(
+    departments,
+    employees,
+    dept -> dept.getId(),
+    emp -> emp.getDepartmentId(),
+    (dept, emps) -> new DepartmentWithEmployees(dept, emps)
+);
+```
+
+### Ejemplo de join
+
+```java
+// Realizar join entre departamentos y empleados
+List<DeptEmpPair> pairs = Linq.join(
+    departments,
+    employees,
+    dept -> dept.getId(),
+    emp -> emp.getDepartmentId(),
+    (dept, emp) -> new DeptEmpPair(dept.getName(), emp.getName())
+);
+
+// pairs contendrá pares como [IT, Juan], [IT, María], [HR, Pedro]
+```
+
+### Ejemplo con manejo de nulos
+
+```java
+// groupJoin con manejo seguro de nulos
+List<DepartmentWithEmployees> result = Linq.groupJoin(
+    departments,
+    null,  // Lista interna nula
+    dept -> dept != null ? dept.getId() : -1,
+    emp -> emp != null ? emp.getDepartmentId() : -1,
+    (dept, emps) -> {
+        if (dept == null) return null;
+        return new DepartmentWithEmployees(dept, emps != null ? emps : Collections.emptyList());
+    }
+);
+```
 - `orderByDescending(Iterable<T> source)`: Ordena en orden natural descendente
 - `orderByDescending(Iterable<T> source, Function<T, ? extends Comparable> keySelector)`: Ordena por clave en orden descendente
 

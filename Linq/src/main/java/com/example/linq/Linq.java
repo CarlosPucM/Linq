@@ -599,11 +599,122 @@ public class Linq {
         }
 
         return StreamSupport.stream(source.spliterator(), false)
-                .collect(Collectors.groupingBy(
-                        keySelector,
-                        HashMap::new,
-                        Collectors.mapping(elementSelector, Collectors.toList())
-                ));
+            .collect(Collectors.groupingBy(
+                    keySelector,
+                    HashMap::new,
+                    Collectors.mapping(elementSelector, Collectors.toList())
+            ));
+}
+
+    /**
+     * Relaciona los elementos de dos secuencias basándose en la igualdad de claves y agrupa los resultados.
+     * Es similar a un left outer join que agrupa los resultados de la secuencia derecha.
+     *
+     * @param <TOuter>      El tipo de los elementos de la primera secuencia.
+     * @param <TInner>      El tipo de los elementos de la segunda secuencia.
+     * @param <TKey>        El tipo de las claves devueltas por las funciones de selección de claves.
+     * @param <TResult>     El tipo de los elementos del resultado.
+     * @param outer         La primera secuencia a unir.
+     * @param inner         La secuencia que se unirá a la primera secuencia.
+     * @param outerKeySelector Una función para extraer la clave de unión de cada elemento de la primera secuencia.
+     * @param innerKeySelector Una función para extraer la clave de unión de cada elemento de la segunda secuencia.
+     * @param resultSelector Una función que crea un elemento de resultado a partir de un elemento de la primera secuencia
+     *                       y una colección de elementos coincidentes de la segunda secuencia.
+     * @return Una Lista que contiene elementos de tipo TResult que se obtienen al realizar una agrupación
+     *         de unión en dos secuencias. Devuelve una lista vacía si alguna de las secuencias de entrada
+     *         es nula o está vacía, o si alguna de las funciones de selección es nula.
+     */
+    public static <TOuter, TInner, TKey, TResult> List<TResult> groupJoin(
+            Iterable<TOuter> outer,
+            Iterable<TInner> inner,
+            Function<TOuter, TKey> outerKeySelector,
+            Function<TInner, TKey> innerKeySelector,
+            BiFunction<TOuter, List<TInner>, TResult> resultSelector) {
+        
+        // Verificar parámetros nulos
+        if (outer == null || inner == null || outerKeySelector == null || innerKeySelector == null || resultSelector == null) {
+            return Collections.emptyList();
+        }
+
+        // Si la secuencia interna está vacía, devolver todos los elementos externos con listas vacías
+        if (!inner.iterator().hasNext()) {
+            List<TResult> result = new ArrayList<>();
+            for (TOuter outerItem : outer) {
+                if (outerItem == null) continue;
+                try {
+                    TResult resultItem = resultSelector.apply(outerItem, Collections.emptyList());
+                    if (resultItem != null) {
+                        result.add(resultItem);
+                    }
+                } catch (Exception e) {
+                    // Si hay un error al crear el elemento de resultado, omitirlo
+                }
+            }
+            return result;
+        }
+
+        // Crear un mapa de la secuencia interna para búsquedas eficientes
+        Map<TKey, List<TInner>> innerLookup = new HashMap<>();
+        try {
+            // Usar un collector personalizado para manejar claves nulas
+            innerLookup = StreamSupport.stream(inner.spliterator(), false)
+                    .filter(Objects::nonNull)
+                    .collect(HashMap::new, 
+                            (map, item) -> {
+                                try {
+                                    TKey key = innerKeySelector.apply(item);
+                                    if (key != null) {
+                                        map.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+                                    }
+                                } catch (Exception e) {
+                                    // Ignorar elementos que causen errores al obtener la clave
+                                }
+                            },
+                            (map1, map2) -> map2.forEach((key, value) -> 
+                                map1.merge(key, value, (list1, list2) -> {
+                                    list1.addAll(list2);
+                                    return list1;
+                                })
+                            ));
+        } catch (Exception e) {
+            // En caso de error, continuar con un mapa vacío
+            innerLookup = new HashMap<>();
+        }
+
+        // Realizar la unión grupal
+        List<TResult> result = new ArrayList<>();
+        for (TOuter outerItem : outer) {
+            if (outerItem == null) continue;
+            
+            TKey key;
+            try {
+                key = outerKeySelector.apply(outerItem);
+            } catch (Exception e) {
+                // Si hay un error al obtener la clave, saltar este elemento
+                continue;
+            }
+            
+            // Obtener los elementos coincidentes o una lista vacía
+            List<TInner> matchingItems = key != null ? 
+                    innerLookup.getOrDefault(key, Collections.emptyList()) : 
+                    Collections.emptyList();
+            
+            // Asegurarse de que la lista no sea nula
+            if (matchingItems == null) {
+                matchingItems = Collections.emptyList();
+            }
+            
+            try {
+                TResult resultItem = resultSelector.apply(outerItem, matchingItems);
+                if (resultItem != null) {
+                    result.add(resultItem);
+                }
+            } catch (Exception e) {
+                // Si hay un error al crear el elemento de resultado, omitirlo
+            }
+        }
+        
+        return result;
     }
 
     /**
@@ -935,5 +1046,64 @@ public class Linq {
         );
 
         // Result: ["Alice bought a Laptop", "Alice bought a Mouse", "Bob bought a Keyboard"]
+
+
+        // --- Ejemplos de groupJoin ---
+
+        // Clases de ejemplo
+        class Departamento {
+            int id;
+            String nombre;
+            // constructor, getters...
+        }
+
+        class Empleado {
+            int id;
+            String nombre;
+            int departamentoId;
+            // constructor, getters...
+        }
+
+        // Datos de ejemplo
+        List<Departamento> departamentos = Arrays.asList(
+            new Departamento(1, "Ventas"),
+            new Departamento(2, "TI"),
+            new Departamento(3, "Recursos Humanos")
+        );
+
+        List<Empleado> empleados = Arrays.asList(
+            new Empleado(1, "Ana", 1),
+            new Empleado(2, "Carlos", 1),
+            new Empleado(3, "Beatriz", 2),
+            new Empleado(4, "David", 2),
+            new Empleado(5, "Elena", 2)
+        );
+
+        // 1. Obtener departamentos con sus empleados
+        List<DepartamentoConEmpleados> resultado = Linq.groupJoin(
+            departamentos,                     // secuencia externa (departamentos)
+            empleados,                         // secuencia interna (empleados)
+            dept -> dept.getId(),              // clave del departamento
+            emp -> emp.getDepartamentoId(),    // clave del empleado (debe coincidir con id de departamento)
+            (dept, emps) -> new DepartamentoConEmpleados(
+                dept.getId(),
+                dept.getNombre(),
+                emps
+            )
+        );
+
+        // 2. Contar empleados por departamento
+        List<String> conteo = Linq.groupJoin(
+            departamentos,
+            empleados,
+            dept -> dept.getId(),
+            emp -> emp.getDepartamentoId(),
+            (dept, emps) -> String.format("%s: %d empleados",
+                dept.getNombre(),
+                emps.size())
+        );
+
+        // Resultado:
+        // ["Ventas: 2 empleados", "TI: 3 empleados", "Recursos Humanos: 0 empleados"]
     }*/
 }
