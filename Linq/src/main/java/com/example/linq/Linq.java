@@ -1,8 +1,11 @@
 package com.example.linq;
 
+import java.util.Objects;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -99,6 +102,121 @@ public class Linq {
         return StreamSupport.stream(source.spliterator(), false)
                 .filter(predicate)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Proyecta cada elemento de una secuencia en una nueva forma.
+     * Equivalente a LINQ Select. Si la fuente es null/está vacía o el selector es null,
+     * devuelve una lista vacía.
+     *
+     * @param <T>       Tipo de los elementos de entrada.
+     * @param <R>       Tipo de los elementos resultantes.
+     * @param source    La colección Iterable<T> a transformar.
+     * @param selector  Función que transforma cada elemento T en un valor de tipo R.
+     * @return          Un nuevo List<R> con los resultados de aplicar el selector a cada elemento.
+     */
+    public static <T, R> List<R> select(Iterable<T> source, Function<T, R> selector) {
+        if (!any(source) || selector == null) {
+            return Collections.emptyList();
+        }
+
+        return StreamSupport.stream(source.spliterator(), false)
+                .map(selector)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Proyecta cada elemento de una secuencia a una secuencia (Iterable) y aplana las secuencias resultantes en una sola lista.
+     * Equivalente a LINQ SelectMany.
+     *
+     * @param <T>       Tipo de los elementos de entrada.
+     * @param <R>       Tipo de los elementos resultantes.
+     * @param source    La colección Iterable<T> a transformar.
+     * @param selector  Función que transforma cada elemento T en un Iterable<R>.
+     * @return          Un nuevo List<R> con todos los elementos aplanados.
+     */
+    public static <T, R> List<R> selectMany(Iterable<T> source, Function<T, ? extends Iterable<R>> selector) {
+        if (!any(source) || selector == null) {
+            return Collections.emptyList();
+        }
+
+        return StreamSupport.stream(source.spliterator(), false)
+                .map(selector)
+                .filter(Objects::nonNull)
+                .flatMap(iterable -> StreamSupport.stream(iterable.spliterator(), false))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Devuelve el índice del primer elemento que satisface el predicado.
+     *
+     * @param <T>       Tipo de los elementos de la fuente.
+     * @param source    La colección Iterable<T> a evaluar.
+     * @param predicate Predicado que define la condición a cumplir.
+     * @return          El índice (basado en 0) del primer elemento que cumple la condición; -1 si no se encuentra,
+     *                  o si la fuente o el predicado son null.
+     */
+    public static <T> int findIndex(Iterable<T> source, Predicate<T> predicate) {
+        if (!any(source) || predicate == null) {
+            return -1;
+        }
+
+        int index = 0;
+        for (T item : source) {
+            if (predicate.test(item)) {
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
+
+    /**
+     * Devuelve una lista con elementos únicos de la secuencia de entrada, preservando el orden de aparición.
+     *
+     * @param <T>    Tipo de los elementos de la fuente.
+     * @param source La colección Iterable<T> a evaluar.
+     * @return       Un nuevo List<T> con elementos distintos; lista vacía si la fuente es null o no tiene elementos.
+     */
+    public static <T> List<T> distinct(Iterable<T> source) {
+        if (!any(source)) {
+            return Collections.emptyList();
+        }
+
+        return StreamSupport.stream(source.spliterator(), false)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Cuenta el número total de elementos en la secuencia.
+     *
+     * @param <T>    Tipo de los elementos de la fuente.
+     * @param source La colección Iterable<T> a evaluar.
+     * @return       La cantidad de elementos; 0 si la fuente es null o está vacía.
+     */
+    public static <T> int count(Iterable<T> source) {
+        if (!any(source)) {
+            return 0;
+        }
+        return (int) StreamSupport.stream(source.spliterator(), false).count();
+    }
+
+    /**
+     * Cuenta los elementos que cumplen con el predicado.
+     *
+     * @param <T>       Tipo de los elementos de la fuente.
+     * @param source    La colección Iterable<T> a evaluar.
+     * @param predicate Predicado que define la condición a cumplir.
+     * @return          La cantidad de elementos que cumplen; 0 si la fuente es null/está vacía o el predicado es null.
+     */
+    public static <T> int count(Iterable<T> source, Predicate<T> predicate) {
+        if (!any(source) || predicate == null) {
+            return 0;
+        }
+        return (int) StreamSupport.stream(source.spliterator(), false)
+                .filter(predicate)
+                .count();
     }
 
     /**
@@ -209,5 +327,44 @@ public class Linq {
         System.out.println("Skip 2 de strings: " + Linq.skip(strings, 2));   // [c, d, e]
         System.out.println("Skip 1 de emptyList: " + Linq.skip(emptyList, 1)); // []
         System.out.println("Skip 3 de null: " + Linq.skip(null, 3));        // []
+
+        // --- Ejemplos de select ---
+        List<Integer> numbers = List.of(1,2,3);
+        List<String> texts = Linq.select(numbers, n -> "N:" + n); // ["N:1","N:2","N:3"]
+
+        List<String> fruits = List.of("apple","banana");
+        List<Integer> lengths = Linq.select(fruits, String::length); // [5,6]
+
+        // --- Ejemplos de selectMany ---
+        List<String> words = List.of("hi", "abc");
+        List<Character> chars = Linq.selectMany(words, s -> {
+            List<Character> list = new ArrayList<>();
+            for (char c : s.toCharArray()) list.add(c);
+            return list;
+        }); // [h, i, a, b, c]
+
+        List<List<Integer>> nested = List.of(List.of(1,2), List.of(3), List.of());
+        List<Integer> flat = Linq.selectMany(nested, x -> x); // [1, 2, 3]
+
+        // --- Ejemplos de findIndex ---
+        List<String> fruits = List.of("apple","banana","cherry");
+        int idx = Linq.findIndex(fruits, s -> s.startsWith("b")); // 1
+        int none = Linq.findIndex(fruits, s -> s.length() > 10);  // -1
+
+        // --- Ejemplos de findIndex ---
+        List<Integer> nums = List.of(1,2,2,3,1);
+        List<Integer> uniq = Linq.distinct(nums); // [1, 2, 3]
+
+        List<String> fruits = List.of("apple","apple","banana");
+        List<String> uniqFruits = Linq.distinct(fruits); // [apple, banana]
+
+        // --- Ejemplos de count ---
+        List<Integer> nums = List.of(1,2,2,3,1);
+        int total = Linq.count(nums);                        // 5
+        int evens = Linq.count(nums, n -> n % 2 == 0);       // 2
+
+        List<String> empty = List.of();
+        int zero = Linq.count(empty);                        // 0
+        int zeroPred = Linq.count(empty, s -> s.isEmpty());  // 0
     }*/
 }

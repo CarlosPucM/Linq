@@ -198,4 +198,76 @@ public class LinqTest {
         List<Integer> result = Linq.skip(numbers, 100);
         assertTrue(result.isEmpty());
     }
+
+    // Pruebas para select
+    @Test
+    public void testSelect_TransformsElements() {
+        List<String> result = Linq.select(numbers, n -> "N:" + n);
+        assertEquals(Arrays.asList("N:1", "N:2", "N:3", "N:4", "N:5", "N:6", "N:7", "N:8", "N:9", "N:10"), result);
+    }
+
+    @Test
+    public void testSelect_ReturnsEmptyForEmptyOrNullSource() {
+        assertTrue(Linq.select(Collections.<Integer>emptyList(), n -> n).isEmpty());
+        assertTrue(Linq.select((Iterable<Integer>) null, n -> n).isEmpty());
+    }
+
+    // Pruebas para selectMany
+    @Test
+    public void testSelectMany_FlattensSequences() {
+        List<List<Integer>> nested = Arrays.asList(Arrays.asList(1, 2), Arrays.asList(3), Arrays.asList());
+        List<Integer> flat = Linq.selectMany(nested, x -> x);
+        assertEquals(Arrays.asList(1, 2, 3), flat);
+    }
+
+    @Test
+    public void testSelectMany_ReturnsEmptyForEmptyOrNullSource() {
+        assertTrue(Linq.selectMany(Collections.<List<Integer>>emptyList(), x -> x).isEmpty());
+        assertTrue(Linq.selectMany((Iterable<List<Integer>>) null, x -> x).isEmpty());
+    }
+
+    // Pruebas para findIndex
+    @Test
+    public void testFindIndex_FindsFirstMatch() {
+        int index = Linq.findIndex(strings, s -> s.startsWith("b"));
+        assertEquals(1, index);
+    }
+
+    @Test
+    public void testFindIndex_ReturnsMinusOneWhenNoMatchOrInvalidInput() {
+        assertEquals(-1, Linq.findIndex(strings, s -> s.length() > 20));
+        assertEquals(-1, Linq.findIndex(Collections.<String>emptyList(), s -> true));
+        assertEquals(-1, Linq.findIndex((Iterable<String>) null, s -> true));
+        assertEquals(-1, Linq.findIndex(strings, null));
+    }
+
+    // Pruebas para distinct
+    @Test
+    public void testDistinct_RemovesDuplicatesPreservingOrder() {
+        List<Integer> withDupes = Arrays.asList(1, 2, 2, 3, 1, 4, 3);
+        List<Integer> uniq = Linq.distinct(withDupes);
+        assertEquals(Arrays.asList(1, 2, 3, 4), uniq);
+    }
+
+    @Test
+    public void testDistinct_ReturnsEmptyForEmptyOrNullSource() {
+        assertTrue(Linq.distinct(Collections.<Integer>emptyList()).isEmpty());
+        assertTrue(Linq.distinct((Iterable<Integer>) null).isEmpty());
+    }
+
+    // Pruebas para count
+    @Test
+    public void testCount_TotalElements() {
+        assertEquals(numbers.size(), Linq.count(numbers));
+        assertEquals(0, Linq.count(Collections.<Integer>emptyList()));
+        assertEquals(0, Linq.count((Iterable<Integer>) null));
+    }
+
+    @Test
+    public void testCount_WithPredicate() {
+        assertEquals(5, Linq.count(numbers, n -> n % 2 != 0));
+        assertEquals(0, Linq.count(numbers, n -> n > 100));
+        assertEquals(0, Linq.count(Collections.<Integer>emptyList(), n -> true));
+        assertEquals(0, Linq.count(numbers, null));
+    }
 }
