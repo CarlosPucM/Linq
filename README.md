@@ -77,6 +77,55 @@ public class Ejemplo {
 - `count(Iterable<T> source, Predicate<T> predicate)`: Cuenta los elementos que cumplen el predicado
 - `any(Iterable<T> source)`: Verifica si hay elementos
 - `any(Iterable<T> source, Predicate<T> predicate)`: Verifica si algún elemento cumple el predicado
+- `all(Iterable<T> source, Predicate<T> predicate)`: Verifica si todos los elementos cumplen el predicado
+
+### Operaciones Numéricas
+- `sum(Iterable<T> source)`: Suma los valores numéricos de la secuencia
+- `sum(Iterable<T> source, Function<T, ?> selector)`: Suma los valores extraídos por el selector
+- `min(Iterable<T> source)`: Encuentra el valor mínimo
+- `min(Iterable<T> source, Function<T, ?> selector)`: Encuentra el valor mínimo según el selector
+- `max(Iterable<T> source)`: Encuentra el valor máximo
+- `max(Iterable<T> source, Function<T, ?> selector)`: Encuentra el valor máximo según el selector
+- `average(Iterable<T> source)`: Calcula el promedio de los valores
+- `average(Iterable<T> source, Function<T, ?> selector)`: Calcula el promedio de los valores extraídos
+
+### Ordenación
+- `orderBy(Iterable<T> source)`: Ordena en orden natural ascendente
+- `orderBy(Iterable<T> source, Function<T, ? extends Comparable> keySelector)`: Ordena por clave en orden ascendente
+- `orderByDescending(Iterable<T> source)`: Ordena en orden natural descendente
+- `orderByDescending(Iterable<T> source, Function<T, ? extends Comparable> keySelector)`: Ordena por clave en orden descendente
+
+## Soporte para Diferentes Tipos de Datos
+
+Los métodos numéricos (`sum`, `min`, `max`, `average`) soportan diferentes tipos de datos:
+
+```java
+// Con números
+List<Integer> numeros = List.of(1, 2, 3, 4, 5);
+double suma = Linq.sum(numeros);  // 15.0
+
+// Con strings que representan números
+List<String> strNumeros = List.of("1", "2.5", "3");
+double sumaStr = Linq.sum(strNumeros);  // 6.5
+
+// Con formato de moneda
+List<String> precios = List.of("$1.99", "2,500.50", "3.75");
+double total = Linq.sum(precios);  // 2506.24
+
+// Con objetos personalizados
+class Producto {
+    String nombre;
+    String precio; // Formato: "$1,000.50"
+    // getters, setters
+}
+
+List<Producto> productos = List.of(
+    new Producto("Laptop", "$1,200.00"),
+    new Producto("Mouse", "$25.50"),
+    new Producto("Teclado", "$45.00")
+);
+
+double totalVentas = Linq.sum(productos, p -> p.getPrecio());
 
 ## Ejemplos Avanzados
 
@@ -96,7 +145,27 @@ class Persona {
     // getters, setters, constructor
 }
 
-List<Persona> personas = /* ... */;
+List<Persona> personas = List.of(
+    new Persona("Ana", 25),
+    new Persona("Carlos", 30),
+    new Persona("Beatriz", 20)
+);
+
+// Ordenar por edad descendente
+List<Persona> personasOrdenadas = Linq.orderByDescending(personas, p -> p.getEdad());
+
+// Calcular el promedio de edad
+double edadPromedio = Linq.average(personas, p -> p.getEdad());
+
+// Verificar si todos son mayores de edad
+boolean todosMayores = Linq.all(personas, p -> p.getEdad() >= 18);
+
+// Sumar todas las edades
+double sumaEdades = Linq.sum(personas, p -> p.getEdad());
+
+// Encontrar la edad mínima y máxima
+double edadMinima = Linq.min(personas, p -> p.getEdad());
+double edadMaxima = Linq.max(personas, p -> p.getEdad());
 
 // Personas mayores de 18 años, ordenadas por nombre
 List<String> nombres = Linq.select(

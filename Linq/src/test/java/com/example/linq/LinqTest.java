@@ -270,4 +270,134 @@ public class LinqTest {
         assertEquals(0, Linq.count(Collections.<Integer>emptyList(), n -> true));
         assertEquals(0, Linq.count(numbers, null));
     }
+    
+    // Pruebas para sum
+    @Test
+    public void testSum_WithNumbers() {
+        double result = Linq.sum(numbers);
+        assertEquals(55.0, result, 0.001); // 1+2+...+10 = 55
+    }
+    
+    @Test
+    public void testSum_WithSelector() {
+        double result = Linq.sum(numbers, n -> n * 2);
+        assertEquals(110.0, result, 0.001); // (1+2+...+10)*2 = 110
+    }
+    
+    @Test
+    public void testSum_WithStrings() {
+        List<String> strNumbers = Arrays.asList("1", "2.5", "3.75");
+        double result = Linq.sum(strNumbers);
+        assertEquals(7.25, result, 0.001);
+    }
+    
+    @Test
+    public void testSum_WithCurrency() {
+        List<String> prices = Arrays.asList("$1.99", "2,500.50", "3.75");
+        double result = Linq.sum(prices);
+        assertEquals(2506.24, result, 0.001);
+    }
+    
+    @Test
+    public void testSum_EmptyOrNull() {
+        assertEquals(0.0, Linq.sum(emptyList), 0.001);
+        assertEquals(0.0, Linq.sum((Iterable<?>)null), 0.001);
+    }
+    
+    // Pruebas para min y max
+    @Test
+    public void testMinMax_WithNumbers() {
+        assertEquals(1.0, Linq.min(numbers), 0.001);
+        assertEquals(10.0, Linq.max(numbers), 0.001);
+    }
+    
+    @Test
+    public void testMinMax_WithSelector() {
+        List<String> strings = Arrays.asList("a", "bb", "ccc", "d");
+        assertEquals(1.0, Linq.min(strings, String::length), 0.001);
+        assertEquals(3.0, Linq.max(strings, String::length), 0.001);
+    }
+    
+    @Test
+    public void testMinMax_EmptyOrNull() {
+        assertEquals(0.0, Linq.min(emptyList), 0.001);
+        assertEquals(0.0, Linq.max(emptyList), 0.001);
+        assertEquals(0.0, Linq.min(null), 0.001);
+        assertEquals(0.0, Linq.max(null), 0.001);
+    }
+    
+    // Pruebas para average
+    @Test
+    public void testAverage_WithNumbers() {
+        double result = Linq.average(numbers);
+        assertEquals(5.5, result, 0.001); // (1+2+...+10)/10 = 5.5
+    }
+    
+    @Test
+    public void testAverage_WithSelector() {
+        double result = Linq.average(numbers, n -> n * 2);
+        assertEquals(11.0, result, 0.001); // (2+4+...+20)/10 = 11
+    }
+    
+    @Test
+    public void testAverage_EmptyOrNull() {
+        assertEquals(0.0, Linq.average(emptyList), 0.001);
+        assertEquals(0.0, Linq.average((Iterable<?>)null), 0.001);
+    }
+    
+    // Pruebas para orderBy y orderByDescending
+    @Test
+    public void testOrderBy_Ascending() {
+        List<Integer> unordered = Arrays.asList(3, 1, 4, 1, 5, 9, 2, 6);
+        List<Integer> ordered = Linq.orderBy(unordered);
+        assertEquals(Arrays.asList(1, 1, 2, 3, 4, 5, 6, 9), ordered);
+    }
+    
+    @Test
+    public void testOrderBy_WithKeySelector() {
+        List<String> words = Arrays.asList("banana", "apple", "cherry");
+        List<String> ordered = Linq.orderBy(words, s -> s);
+        assertEquals(Arrays.asList("apple", "banana", "cherry"), ordered);
+    }
+    
+    @Test
+    public void testOrderByDescending_WithKeySelector() {
+        List<String> words = Arrays.asList("banana", "apple", "cherry");
+        List<String> ordered = Linq.orderByDescending(words, s -> s);
+        assertEquals(Arrays.asList("cherry", "banana", "apple"), ordered);
+    }
+    
+    @Test
+    public void testOrderBy_EmptyOrNull() {
+        assertTrue(Linq.orderBy(emptyList).isEmpty());
+        assertTrue(Linq.orderBy(null).isEmpty());
+        assertTrue(Linq.orderByDescending(emptyList).isEmpty());
+        assertTrue(Linq.orderByDescending(null).isEmpty());
+    }
+    
+    // Pruebas para all
+    @Test
+    public void testAll_ReturnsTrueWhenAllMatch() {
+        assertTrue(Linq.all(numbers, n -> n > 0));
+    }
+    
+    @Test
+    public void testAll_ReturnsFalseWhenAnyFails() {
+        assertFalse(Linq.all(numbers, n -> n < 5));
+    }
+    
+    @Test
+    public void testAll_EmptyListReturnsTrue() {
+        assertTrue(Linq.all(emptyList, n -> false));
+    }
+    
+    @Test
+    public void testAll_NullPredicateReturnsFalse() {
+        assertFalse(Linq.all(numbers, null));
+    }
+    
+    @Test
+    public void testAll_NullSourceReturnsTrue() {
+        assertTrue(Linq.all(null, n -> true));
+    }
 }
